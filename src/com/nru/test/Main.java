@@ -6,15 +6,34 @@ import java.awt.EventQueue;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+
+import org.jnativehook.GlobalScreen;
+import org.jnativehook.NativeInputEvent;
+import org.jnativehook.SwingDispatchService;
+import org.jnativehook.keyboard.NativeKeyEvent;
+import org.jnativehook.keyboard.NativeKeyListener;
+import org.jnativehook.mouse.NativeMouseEvent;
+import org.jnativehook.mouse.NativeMouseInputListener;
+import org.jnativehook.mouse.NativeMouseWheelEvent;
+import org.jnativehook.mouse.NativeMouseWheelListener;
+
+import com.nru.util.HookWin32;
+
 import java.awt.Color;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+
 import java.awt.SystemColor;
+import java.util.Vector;
+
 import javax.swing.SwingConstants;
 import java.awt.Font;
 
 public class Main extends JFrame {
 	private JPanel contentPane;
 	JLabel lblTimer = new JLabel("00:00:00");
+	int no_event_count = 0;
+	String last_event_str="", current_event_str="";
 	public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
@@ -50,22 +69,47 @@ public class Main extends JFrame {
 		thread.start();
 	}
 
-	private class StartProcess implements Runnable{
+	private class StartProcess implements Runnable, NativeKeyListener, NativeMouseInputListener, NativeMouseWheelListener{
 		boolean stop = false;
+		public StartProcess() {
+			GlobalScreen.setEventDispatcher(new SwingDispatchService());
+			try{
+				GlobalScreen.registerNativeHook();
+				GlobalScreen.addNativeKeyListener(this);
+				GlobalScreen.addNativeMouseListener(this);
+				GlobalScreen.addNativeMouseMotionListener(this);
+				GlobalScreen.addNativeMouseWheelListener(this);
+			}catch(Exception exp){exp.printStackTrace();}
+		}
+
 		@Override
 		public void run() {
 			long startTime =System.currentTimeMillis();
 			while(!stop){
 				try {
 					long currentTime =System.currentTimeMillis();
+					//System.out.println("___________: "+last_event_str);
+					if(last_event_str.trim().equals("") || last_event_str==null || last_event_str.trim().equals(current_event_str)){
+						no_event_count++;
+					}else{
+						no_event_count=0;
+						current_event_str = last_event_str;
+					}
+					System.out.println("-->count down: "+no_event_count);
+					if(no_event_count>10){
+						JOptionPane.showMessageDialog(null, "You are not active since last 10 seconds !!!");
+					}
 					startTimer(startTime, currentTime);
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {e.printStackTrace();}
 			}
 		}
+
 		public void stop(){
+
 			stop = true;
 		}
+
 		private void startTimer(long startTime, long currentTime){
 			String elapsedTime= "00:00:00";
 			long diffTime_millisecs=currentTime - startTime;
@@ -91,8 +135,57 @@ public class Main extends JFrame {
 			elapsedTime = sb.toString();
 			//elapsedTime = hourStr+":"+minStr+":"+secStr;
 			lblTimer.setText(elapsedTime);
+
+		}
+		@Override
+		public void nativeMouseClicked(NativeMouseEvent e) {
+			getEventInfo(e);
+
+		}
+		@Override
+		public void nativeMousePressed(NativeMouseEvent e) {
+			getEventInfo(e);
+
+		}
+		@Override
+		public void nativeMouseReleased(NativeMouseEvent e) {
+			getEventInfo(e);
+
+		}
+		@Override
+		public void nativeMouseDragged(NativeMouseEvent e) {
+			getEventInfo(e);
+
+		}
+		@Override
+		public void nativeMouseMoved(NativeMouseEvent e) {
+			getEventInfo(e);
+
+		}
+		@Override
+		public void nativeMouseWheelMoved(NativeMouseWheelEvent e) {
+			getEventInfo(e);
+
+		}
+		@Override
+		public void nativeKeyPressed(NativeKeyEvent e) {
+			getEventInfo(e);
+
+		}
+		@Override
+		public void nativeKeyReleased(NativeKeyEvent e) {
+			getEventInfo(e);
+
+		}
+		@Override
+		public void nativeKeyTyped(NativeKeyEvent e) {
+			getEventInfo(e);
+
 		}
 
+		public String getEventInfo(final NativeInputEvent e) {
+			last_event_str = e.paramString();
+			return last_event_str;
+		}
 	}
-
 }
